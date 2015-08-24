@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<head>
+    <title>d3 Fishbone diagram</title>
+    <meta charset="utf-8">
+    <style>
+        html, body{ margin: 0; padding: 0; overflow: hidden;}
+
+        /* get it? gill? */
+        *{ font-family: monospace; }
+
+        .label-0{ font-size: 2em; }
+        .label-1{ font-size: 1.5em; fill: #111; }
+        .label-2{ font-size: 1em; fill: #444; }
+        .label-3{ font-size: .9em; fill: #888; }
+        .label-4{ font-size: .8em; fill: #aaa; }
+        .label-5{ font-size: .7em; fill: #eee; }
+        .label-6{ font-size: .6em; fill: #eae; }
+
+        .link-0{ stroke: #000; stroke-width: 2px}
+        .link-1{ stroke: #333; stroke-width: 1px}
+        .link-2,
+        .link-3,
+        .link-4,
+        .link-5,
+        .link-6{ stroke: #666; stroke-width: .5px; }
+    </style>
+</head>
+<body>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.4.1/d3.min.js" charset="utf-8"></script>
+<script src="./d3.fishbone.js" charset="utf-8"></script>
+<script>
+
+    var size = (function () {
+        var g = window.document.documentElement;
+        return {
+            width: g.clientWidth,
+            height: g.clientHeight
+        };
+    });
+
+    // load the data
+    d3.json("./data.json", function (data) {
+
+        data = data
+                .filter(function (row) {
+                    return row.name.indexOf('Method') == 0 || (row.r || '').indexOf('Method') == 0;
+                })
+                .map(function (row) {
+                    if (row.name === 'Method') {
+                        row.r = null;
+                    }
+                    return row;
+                });
+
+        // create the configurable selection modifier
+        var fishbone = d3.fishbone(data, size());
+
+        var svg = d3
+                .select('body')
+                .append('svg')
+                .attr(size())
+                .call(fishbone.defaultArrow)
+                .call(fishbone);
+
+        fishbone.force()
+                .start();
+
+        // handle resizing the window
+        d3
+                .select(window)
+                .on("resize", function () {
+
+                    var s = size();
+
+                    fishbone.force()
+                            .size([s.width, s.height])
+                            .start();
+
+                    svg.attr(s);
+                });
+
+    });
+
+</script>
+</body>
+</html>
