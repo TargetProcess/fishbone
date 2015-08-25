@@ -23,6 +23,9 @@
         .link-4,
         .link-5,
         .link-6{ stroke: #666; stroke-width: .5px; }
+
+        .positive { fill: green }
+        .negative { fill: red }
     </style>
 </head>
 <body>
@@ -38,22 +41,51 @@
         };
     });
 
-    // load the data
-    d3.json("./data.json", function (data) {
+    var fishbone;
+    var srcData;
 
-        data = data
+    var feedback = [
+        {"k":"Method 1", rate: 1, comment: "Good computers", author: "Anna", date: new Date()},
+        {"k":"Method 1", rate: 1, comment: "Awesome computers", author: "Oleg", date: new Date()},
+        {"k":"Method 1", rate: -1, comment: "Bad computers", author: "Vlad", date: new Date()}
+    ];
+
+    var refresh = function () {
+        fishbone.force()
+                .start();
+    };
+
+    var onSelectBranch = function (k) {
+
+        srcData = srcData
                 .filter(function (row) {
-                    return row.name.indexOf('Method') == 0 || (row.r || '').indexOf('Method') == 0;
+                    return row.name.indexOf(k) == 0 || (row.r || '').indexOf(k) == 0;
                 })
                 .map(function (row) {
-                    if (row.name === 'Method') {
+                    if (row.name === k) {
                         row.r = null;
                     }
                     return row;
                 });
 
+        refresh();
+    };
+
+    // load the data
+    d3.json("./data.json", function (data) {
+
+        srcData = data;
+
         // create the configurable selection modifier
-        var fishbone = d3.fishbone(data, size());
+        fishbone = d3.fishbone(
+                size(),
+                function () {
+                    return srcData;
+                },
+                function () {
+                    return feedback;
+                },
+                onSelectBranch);
 
         var svg = d3
                 .select('body')

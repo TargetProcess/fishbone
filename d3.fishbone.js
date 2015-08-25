@@ -27,7 +27,7 @@
 
     "use strict";
 
-    d3.fishbone = function (srcData, srcSize) {
+    d3.fishbone = function (srcSize, fnSrcData, fnFeedback, onSelectBranch) {
 
         // private variables
         var _margin = 50;
@@ -44,9 +44,15 @@
             return "arrow";
         };
 
+        var _feedback = function (k) {
+            return fnFeedback().filter(function (r) {
+                return r.k === k;
+            });
+        };
+
         // the children accessor
         var _children = function (d) {
-            return srcData.filter(function (row) {
+            return fnSrcData().filter(function (row) {
                 return row.r === d.name;
             });
         };
@@ -70,7 +76,7 @@
             .size([srcSize.width, srcSize.height])
             .linkDistance(_linkDistance)
             .chargeDistance([10])
-            .on("tick", _tick);
+            .on('tick', _tick);
 
         var fb1 = function (root) {
 
@@ -78,7 +84,7 @@
             _nodes = [];
 
             // populate the nodes and the links globals as a side effect
-            _build_nodes(srcData.filter(function (row) { return row.r === null })[0]);
+            _build_nodes(fnSrcData().filter(function (row) { return row.r === null })[0]);
 
             // set the nodes and the links of the force
             _force
@@ -112,10 +118,59 @@
                 .append('g')
                 .attr({
                     "class": function (d) {
-                        return "node" + (d.root ? " root" : "");
+                        return 'node' + (d.root ? ' root' : '');
                     }
                 })
-                .append('text');
+                .call(function () {
+                    this.append('text');
+
+                    //this.append('circle')
+                    //    .attr({
+                    //        r: function (row) {
+                    //            return _feedback(row.name).length;
+                    //        }
+                    //    });
+
+                    this.append('rect')
+                        .attr({
+                            'class': 'positive',
+                            height: function (d) {
+                                return (d.hasOwnProperty('name')) ? 2 : 0;
+                            },
+                            width: function (d) {
+                                return (_feedback(d.name)
+                                    .filter(function (row) {
+                                        return row.rate > 0;
+                                    })
+                                    .length);
+                            },
+                            x: 0,
+                            y: -2
+                        });
+
+                    this.append('rect')
+                        .attr({
+                            'class': 'negative',
+                            height: function (d) {
+                                return (d.hasOwnProperty('name')) ? 2 : 0;
+                            },
+                            width: function (d) {
+                                return (_feedback(d.name)
+                                    .filter(function (row) {
+                                        return row.rate < 0;
+                                    })
+                                    .length);
+                            },
+                            x: function (d) {
+                                return (-1) * (_feedback(d.name)
+                                    .filter(function (row) {
+                                        return row.rate < 0;
+                                    })
+                                    .length);
+                            },
+                            y: -2
+                        });
+                });
 
             nods.select('text')
                 .attr({
@@ -123,20 +178,19 @@
                         return 'label-' + d.depth;
                     },
                     "text-anchor": function (d) {
-                        return !d.depth ? "start" : d.horizontal ? "end" : "middle";
+                        return !d.depth ? 'start' : d.horizontal ? 'end' : 'middle';
                     },
                     dy: function (d) {
-                        return d.horizontal ? ".35em" : d.region === 1 ? "1em" : "-.2em";
+                        return d.horizontal ? '.35em' : d.region === 1 ? '1em' : '-.2em';
+                    },
+                    dx: function (d) {
+                        return !d.depth ? '0' : '-0.5em';
                     }
                 })
-                .text(_label);
-
-            // set up node events
-            //_node
-            //    .call(_force.drag)
-            //    .on("mousedown", function () {
-            //        d3.event.stopPropagation();
-            //    });
+                .text(_label)
+                .on('dblclick', function (row) {
+                    onSelectBranch(row.name);
+                });
 
             // select this so we know its width in tick
             _root = root.select('.root').node();
