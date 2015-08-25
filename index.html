@@ -64,9 +64,11 @@
         force.start();
         times(250).forEach(force.tick.bind(force));
         force.stop();
+
+        force.start();
     };
 
-    var onSelectBranch = function (row) {
+    var onDblClickBranch = function (row) {
 
         var k = row.k;
 
@@ -85,6 +87,21 @@
         });
 
         srcData = rec.concat(subX);
+
+        drawFishbone();
+    };
+
+    var onClickBranch = function (row) {
+        var childPath = row.path + '/' + row.k;
+        console.log('addChild("' + childPath + '", "xxx")');
+    };
+
+    var addChild = function (newPath, newName) {
+        srcData.push({
+            name: newName,
+            path: newPath,
+            k: (srcData.length + 1)
+        });
 
         drawFishbone();
     };
@@ -118,7 +135,8 @@
                 function () {
                     return feedback;
                 },
-                onSelectBranch);
+                onDblClickBranch,
+                onClickBranch);
 
         var body = d3.select('body');
         body.select('svg').remove();

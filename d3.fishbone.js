@@ -27,7 +27,7 @@
 
     "use strict";
 
-    d3.fishbone = function (srcSize, fnSrcData, fnFeedback, onSelectBranch) {
+    d3.fishbone = function (srcSize, fnSrcData, fnFeedback, onDblClickBranch, onClickBranch) {
 
         // private variables
         var _margin = 50;
@@ -138,7 +138,8 @@
                             }
                         })
                         .text(_label)
-                        .on('dblclick', onSelectBranch);
+                        .on('click', onClickBranch)
+                        .on('dblclick', onDblClickBranch);
 
                     //this.append('circle')
                     //    .attr({
