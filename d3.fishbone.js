@@ -122,7 +122,23 @@
                     }
                 })
                 .call(function () {
-                    this.append('text');
+                    this.append('text')
+                        .attr({
+                            "class": function (d) {
+                                return 'label-' + d.depth;
+                            },
+                            "text-anchor": function (d) {
+                                return !d.depth ? 'start' : d.horizontal ? 'end' : 'middle';
+                            },
+                            dy: function (d) {
+                                return d.horizontal ? '.35em' : d.region === 1 ? '1em' : '-.2em';
+                            },
+                            dx: function (d) {
+                                return !d.depth ? '0' : '-0.5em';
+                            }
+                        })
+                        .text(_label)
+                        .on('dblclick', onSelectBranch);
 
                     //this.append('circle')
                     //    .attr({
@@ -170,26 +186,6 @@
                             },
                             y: -2
                         });
-                });
-
-            nods.select('text')
-                .attr({
-                    "class": function (d) {
-                        return 'label-' + d.depth;
-                    },
-                    "text-anchor": function (d) {
-                        return !d.depth ? 'start' : d.horizontal ? 'end' : 'middle';
-                    },
-                    dy: function (d) {
-                        return d.horizontal ? '.35em' : d.region === 1 ? '1em' : '-.2em';
-                    },
-                    dx: function (d) {
-                        return !d.depth ? '0' : '-0.5em';
-                    }
-                })
-                .text(_label)
-                .on('dblclick', function (row) {
-                    onSelectBranch(row.name);
                 });
 
             // select this so we know its width in tick

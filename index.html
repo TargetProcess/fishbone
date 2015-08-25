@@ -47,6 +47,7 @@
         return r;
     };
 
+    var svg;
     var fishbone;
     var srcData;
 
@@ -56,12 +57,18 @@
         {"k":"Method 1", rate: -1, comment: "Bad computers", author: "Vlad", date: new Date()}
     ];
 
-    var refresh = function () {
-        fishbone.force()
-                .start();
+    var forceLayout = function () {
+        var s = size();
+        var force = fishbone.force();
+        force.size([s.width, s.height]);
+        force.start();
+        times(250).forEach(force.tick.bind(force));
+        force.stop();
     };
 
-    var onSelectBranch = function (k) {
+    var onSelectBranch = function (row) {
+
+        var k = row.k;
 
         var rec = srcData.filter(function (row) {
             return row.k === k;
@@ -79,7 +86,7 @@
 
         srcData = rec.concat(subX);
 
-        refresh();
+        drawFishbone();
     };
 
     // load the data
@@ -100,44 +107,39 @@
             {"name": "BBB",          k: "9", "path":"./0/1/5/6/7/8"}
         ];
 
+    var drawFishbone = function () {
+
         // create the configurable selection modifier
         fishbone = d3.fishbone(
                 size(),
                 function () {
-                    return srcData;
+                    return JSON.parse(JSON.stringify(srcData));
                 },
                 function () {
                     return feedback;
                 },
                 onSelectBranch);
 
-        var svg = d3
-                .select('body')
+        var body = d3.select('body');
+        body.select('svg').remove();
+        svg = body
                 .append('svg')
                 .attr(size())
                 .call(fishbone.defaultArrow)
                 .call(fishbone);
 
-        var force = fishbone.force();
-        force.start();
-        times(250).forEach(force.tick.bind(force));
-        force.stop();
+        forceLayout();
+    };
 
-        // handle resizing the window
-        d3
-                .select(window)
-                .on("resize", function () {
+    drawFishbone();
 
-                    var s = size();
-
-                    var force = fishbone.force();
-                    force.size([s.width, s.height]);
-                    force.start();
-                    times(250).forEach(force.tick.bind(force));
-                    force.stop();
-
-                    svg.attr(s);
-                });
+    // handle resizing the window
+    d3
+            .select(window)
+            .on("resize", function () {
+                forceLayout();
+                svg.attr(size());
+            });
 </script>
 </body>
 </html>
