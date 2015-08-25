@@ -13,8 +13,8 @@
         .label-2{ font-size: 1em; fill: #444; }
         .label-3{ font-size: .9em; fill: #888; }
         .label-4{ font-size: .8em; fill: #aaa; }
-        .label-5{ font-size: .7em; fill: #eee; }
-        .label-6{ font-size: .6em; fill: #eae; }
+        .label-5{ font-size: .8em; fill: #aaa; }
+        .label-6{ font-size: .8em; fill: #aaa; }
 
         .link-0{ stroke: #000; stroke-width: 2px}
         .link-1{ stroke: #333; stroke-width: 1px}
@@ -41,6 +41,12 @@
         };
     });
 
+    var times = function (num) {
+        var r = [];
+        for (var i = 0; i < num; i++) r.push(i);
+        return r;
+    };
+
     var fishbone;
     var srcData;
 
@@ -57,24 +63,42 @@
 
     var onSelectBranch = function (k) {
 
-        srcData = srcData
-                .filter(function (row) {
-                    return row.name.indexOf(k) == 0 || (row.r || '').indexOf(k) == 0;
-                })
-                .map(function (row) {
-                    if (row.name === k) {
-                        row.r = null;
-                    }
-                    return row;
-                });
+        var rec = srcData.filter(function (row) {
+            return row.k === k;
+        });
+
+        if (rec.length === 0) {
+            return [];
+        }
+
+        var path = rec[0].path + '/' + rec[0].k;
+
+        var subX = srcData.filter(function (row) {
+            return row.path.indexOf(path) === 0;
+        });
+
+        srcData = rec.concat(subX);
 
         refresh();
     };
 
     // load the data
-    d3.json("./data.json", function (data) {
 
-        srcData = data;
+        srcData = [
+            {"name": "Quality",      k: "0", "path":"."},
+            {"name":"Method",        k: "1", "path":"./0"},
+            {"name":"Machine",       k: "2", "path":"./0"},
+
+            {"name":"Mill",          k: "3", "path":"./0/2"},
+            {"name":"Mixer",         k: "4", "path":"./0/2"},
+
+            {"name":"Sci-fi",        k: "5", "path":"./0/1"},
+
+            {"name":"Method 1",      k: "6", "path":"./0/1/5"},
+            {"name": "Method 1.1",   k: "7", "path":"./0/1/5/6"},
+            {"name": "Method 1.1.1", k: "8", "path":"./0/1/5/6/7"},
+            {"name": "BBB",          k: "9", "path":"./0/1/5/6/7/8"}
+        ];
 
         // create the configurable selection modifier
         fishbone = d3.fishbone(
@@ -94,8 +118,10 @@
                 .call(fishbone.defaultArrow)
                 .call(fishbone);
 
-        fishbone.force()
-                .start();
+        var force = fishbone.force();
+        force.start();
+        times(250).forEach(force.tick.bind(force));
+        force.stop();
 
         // handle resizing the window
         d3
@@ -104,15 +130,14 @@
 
                     var s = size();
 
-                    fishbone.force()
-                            .size([s.width, s.height])
-                            .start();
+                    var force = fishbone.force();
+                    force.size([s.width, s.height]);
+                    force.start();
+                    times(250).forEach(force.tick.bind(force));
+                    force.stop();
 
                     svg.attr(s);
                 });
-
-    });
-
 </script>
 </body>
 </html>

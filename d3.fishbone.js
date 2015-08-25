@@ -53,7 +53,7 @@
         // the children accessor
         var _children = function (d) {
             return fnSrcData().filter(function (row) {
-                return row.r === d.name;
+                return row.path === (d.path + '/' + d.k);
             });
         };
 
@@ -84,7 +84,7 @@
             _nodes = [];
 
             // populate the nodes and the links globals as a side effect
-            _build_nodes(fnSrcData().filter(function (row) { return row.r === null })[0]);
+            _build_nodes(fnSrcData().sort(function (a, b) { return a.path.length - b.path.length })[0]);
 
             // set the nodes and the links of the force
             _force
@@ -320,8 +320,8 @@
 
         function _nodePosition(root) {
             // uses an SVG `transform` to position nodes
-            root.attr("transform", function (d) {
-                return "translate(" + d.x + "," + d.y + ")";
+            root.attr('transform', function (d) {
+                return 'translate(' + d.x + ',' + d.y + ')';
             });
         }
 
@@ -442,5 +442,6 @@
         };
 
         return fb1;
-    }; // d3.fishbone
+    };
+
 }).call(this, d3);
