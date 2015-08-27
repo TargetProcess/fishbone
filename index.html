@@ -29,9 +29,35 @@
     </style>
 </head>
 <body>
+<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
 <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.4.1/d3.min.js" charset="utf-8"></script>
 <script src="./d3.fishbone.js" charset="utf-8"></script>
 <script>
+
+    $(window).on('hashchange', function() {
+
+        var k = ((window.location.hash || '').substr(1) || '0');
+
+        var srcData = getData();
+
+        var rec = srcData.filter(function (row) {
+            return row.k === k;
+        });
+
+        if (rec.length === 0) {
+            return [];
+        }
+
+        var path = rec[0].path + '/' + rec[0].k;
+
+        var subX = srcData.filter(function (row) {
+            return row.path.indexOf(path) === 0;
+        });
+
+        srcData = rec.concat(subX);
+
+        drawFishbone(srcData);
+    });
 
     var size = (function () {
         var g = window.document.documentElement;
@@ -69,26 +95,7 @@
     };
 
     var onDblClickBranch = function (row) {
-
-        var k = row.k;
-
-        var rec = srcData.filter(function (row) {
-            return row.k === k;
-        });
-
-        if (rec.length === 0) {
-            return [];
-        }
-
-        var path = rec[0].path + '/' + rec[0].k;
-
-        var subX = srcData.filter(function (row) {
-            return row.path.indexOf(path) === 0;
-        });
-
-        srcData = rec.concat(subX);
-
-        drawFishbone();
+        window.location.hash = ('#' + row.k);
     };
 
     var onClickBranch = function (row) {
@@ -103,34 +110,38 @@
             k: (srcData.length + 1)
         });
 
-        drawFishbone();
+        drawFishbone(getData());
     };
 
     // load the data
 
-        srcData = [
-            {"name": "Quality",      k: "0", "path":"."},
-            {"name":"Method",        k: "1", "path":"./0"},
-            {"name":"Machine",       k: "2", "path":"./0"},
+    srcData = [
+        {"name": "Quality", k: "0", "path": "."},
+        {"name": "Method", k: "1", "path": "./0"},
+        {"name": "Machine", k: "2", "path": "./0"},
 
-            {"name":"Mill",          k: "3", "path":"./0/2"},
-            {"name":"Mixer",         k: "4", "path":"./0/2"},
+        {"name": "Mill", k: "3", "path": "./0/2"},
+        {"name": "Mixer", k: "4", "path": "./0/2"},
 
-            {"name":"Sci-fi",        k: "5", "path":"./0/1"},
+        {"name": "Sci-fi", k: "5", "path": "./0/1"},
 
-            {"name":"Method 1",      k: "6", "path":"./0/1/5"},
-            {"name": "Method 1.1",   k: "7", "path":"./0/1/5/6"},
-            {"name": "Method 1.1.1", k: "8", "path":"./0/1/5/6/7"},
-            {"name": "BBB",          k: "9", "path":"./0/1/5/6/7/8"}
-        ];
+        {"name": "Method 1", k: "6", "path": "./0/1/5"},
+        {"name": "Method 1.1", k: "7", "path": "./0/1/5/6"},
+        {"name": "Method 1.1.1", k: "8", "path": "./0/1/5/6/7"},
+        {"name": "BBB", k: "9", "path": "./0/1/5/6/7/8"}
+    ];
 
-    var drawFishbone = function () {
+    var getData = function () {
+        return JSON.parse(JSON.stringify(srcData));
+    };
+
+    var drawFishbone = function (data) {
 
         // create the configurable selection modifier
         fishbone = d3.fishbone(
                 size(),
                 function () {
-                    return JSON.parse(JSON.stringify(srcData));
+                    return data;
                 },
                 function () {
                     return feedback;
@@ -149,7 +160,7 @@
         forceLayout();
     };
 
-    drawFishbone();
+    drawFishbone(getData());
 
     // handle resizing the window
     d3
