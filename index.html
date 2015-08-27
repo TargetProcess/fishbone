@@ -27,11 +27,18 @@
         .positive { fill: green }
         .negative { fill: red }
     </style>
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.4.1/d3.min.js" charset="utf-8"></script>
+    <script src="./d3.fishbone.js" charset="utf-8"></script>
 </head>
 <body>
-<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
-<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.4.1/d3.min.js" charset="utf-8"></script>
-<script src="./d3.fishbone.js" charset="utf-8"></script>
+
+<div style="position: absolute; left: 0; top: 0; width:25%; padding: 2px;">
+    <input type="text" class="i-role-add" style="width: 100%" placeholder="Add sub item">
+    <br/>
+    <input type="text" class="i-role-feed" style="width: 100%" placeholder="Add comment">
+</div>
+
 <script>
 
     $(window).on('hashchange', function() {
@@ -59,6 +66,22 @@
         drawFishbone(srcData);
     });
 
+    $('.i-role-add').on('keypress', function (e) {
+        if (e.keyCode == 13) {
+            var s = $('.i-role-add').val();
+            var t = s.split(':');
+            addChild(t[0], t[1]);
+        }
+    });
+
+    $('.i-role-feed').on('keypress', function (e) {
+        if (e.keyCode == 13) {
+            var s = $('.i-role-feed').val();
+            var t = s.split(':');
+            addFeedback(t[0], t[1], t[2]);
+        }
+    });
+
     var size = (function () {
         var g = window.document.documentElement;
         return {
@@ -78,9 +101,9 @@
     var srcData;
 
     var feedback = [
-        {"k":"Method 1", rate: 1, comment: "Good computers", author: "Anna", date: new Date()},
-        {"k":"Method 1", rate: 1, comment: "Awesome computers", author: "Oleg", date: new Date()},
-        {"k":"Method 1", rate: -1, comment: "Bad computers", author: "Vlad", date: new Date()}
+        {"k":"6", rate: 1, comment: "Good computers", author: "Anna", date: new Date()},
+        {"k":"6", rate: 1, comment: "Awesome computers", author: "Oleg", date: new Date()},
+        {"k":"6", rate: -1, comment: "Bad computers", author: "Vlad", date: new Date()}
     ];
 
     var forceLayout = function () {
@@ -100,7 +123,8 @@
 
     var onClickBranch = function (row) {
         var childPath = row.path + '/' + row.k;
-        console.log('addChild("' + childPath + '", "xxx")');
+        $('.i-role-add').val(childPath + ':sub-branch');
+        $('.i-role-feed').val(row.k + ':add comment here');
     };
 
     var addChild = function (newPath, newName) {
@@ -113,8 +137,20 @@
         drawFishbone(getData());
     };
 
-    // load the data
+    var addFeedback = function (k, comment, rate) {
 
+        feedback.push({
+            "k":k,
+            rate: (rate == '+') ? (+1) : (-1),
+            comment: comment,
+            author: "anonymus",
+            date: new Date()
+        });
+
+        drawFishbone(getData());
+    };
+
+    // load the data
     srcData = [
         {"name": "Quality", k: "0", "path": "."},
         {"name": "Method", k: "1", "path": "./0"},

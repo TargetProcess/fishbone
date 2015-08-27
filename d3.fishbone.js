@@ -155,7 +155,7 @@
                                 return (d.hasOwnProperty('name')) ? 2 : 0;
                             },
                             width: function (d) {
-                                return (_feedback(d.name)
+                                return (_feedback(d.k)
                                     .filter(function (row) {
                                         return row.rate > 0;
                                     })
@@ -172,14 +172,14 @@
                                 return (d.hasOwnProperty('name')) ? 2 : 0;
                             },
                             width: function (d) {
-                                return (_feedback(d.name)
+                                return (_feedback(d.k)
                                     .filter(function (row) {
                                         return row.rate < 0;
                                     })
                                     .length);
                             },
                             x: function (d) {
-                                return (-1) * (_feedback(d.name)
+                                return (-1) * (_feedback(d.k)
                                     .filter(function (row) {
                                         return row.rate < 0;
                                     })
