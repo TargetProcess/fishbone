@@ -24,28 +24,67 @@
         .link-5,
         .link-6{ stroke: #666; stroke-width: .5px; }
 
-        .positive { fill: green }
-        .negative { fill: red }
+        .link-positive { stroke: blue; }
+        .link-negative { stroke: red; }
+
+        .positive { fill: green; stroke: green; }
+        .negative { fill: red; stroke: red; }
     </style>
     <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.4.1/d3.min.js" charset="utf-8"></script>
     <script src="./d3.fishbone.js" charset="utf-8"></script>
+    <script src="./underscore-min.js" charset="utf-8"></script>
+    <script src="./underscore.string.min.js" charset="utf-8"></script>
 </head>
 <body>
 
-<div style="position: absolute; left: 0; top: 0; width:25%; padding: 2px;">
-    <input type="text" class="i-role-add" style="width: 100%" placeholder="Add sub item">
-    <br/>
-    <input type="text" class="i-role-feed" style="width: 100%" placeholder="Add comment">
+<div style="padding: 2px;width: 19%;float:left;min-height: 1000px;">
+<textarea id="structure" style="width:100%; min-height: 800px;">
+Problem
+Problem > People
+Problem > Process
+Problem > Equipment
+Problem > Materials
+Problem > Environment
+Problem > Management
+
+Process > Cause 1
+Cause 1 > Detailed cause
+Cause 1 > Detailed fix > +
+Process > Fix 1 > +
+
++Fix 1 : solve all problems : Alex
+-Fix 1 : require too many time
+-Fix 1 : : Misha
+-Fix 1 : : Vadim
+-Fix 1 : : Oleg
+-Fix 1 : : Jenya
++Fix 1 : : Kostya
++Fix 1 : : Alla
+
+Equipment > Servers
+Servers > Jenkins
+Servers > Statistics
+Statistics > Statistics Speed
+Statistics Speed > SSD > +
+Statistics Speed > Cloud > +
+Cloud > Statistics Price
+
++Statistics Price: Approve budget : Misha
+-Statistics Price: No money for coffee : Jenya
+</textarea>
+    <button id="refresh">Refresh</button>
 </div>
+
+<div id="target" style="border: dotted 1px #000; min-height: 1000px; width: 80%;float:right"></div>
 
 <script>
 
     $(window).on('hashchange', function() {
 
-        var k = ((window.location.hash || '').substr(1) || '0');
-
         var srcData = getData();
+
+        var k = ((window.location.hash || '').substr(1) || srcData[0].k);
 
         var rec = srcData.filter(function (row) {
             return row.k === k;
@@ -66,26 +105,15 @@
         drawFishbone(srcData);
     });
 
-    $('.i-role-add').on('keypress', function (e) {
-        if (e.keyCode == 13) {
-            var s = $('.i-role-add').val();
-            var t = s.split(':');
-            addChild(t[0], t[1]);
-        }
-    });
-
-    $('.i-role-feed').on('keypress', function (e) {
-        if (e.keyCode == 13) {
-            var s = $('.i-role-feed').val();
-            var t = s.split(':');
-            addFeedback(t[0], t[1], t[2]);
-        }
+    $('#refresh').on('click', function (e) {
+        parseSrc();
+        drawFishbone(getData());
     });
 
     var size = (function () {
         var g = window.document.documentElement;
         return {
-            width: g.clientWidth,
+            width: $('#target').width(),
             height: g.clientHeight
         };
     });
@@ -98,13 +126,88 @@
 
     var svg;
     var fishbone;
-    var srcData;
+    var srcData = [];
+    var feedback = [];
 
-    var feedback = [
-        {"k":"6", rate: 1, comment: "Good computers", author: "Anna", date: new Date()},
-        {"k":"6", rate: 1, comment: "Awesome computers", author: "Oleg", date: new Date()},
-        {"k":"6", rate: -1, comment: "Bad computers", author: "Vlad", date: new Date()}
-    ];
+    function parseSrc() {
+
+        var isComment = function (str) {
+            var s = str.charAt(0);
+            return ((s === '+') || (s === '-'));
+        };
+
+        var isNotComment = function (str) {
+            return !isComment(str);
+        };
+
+        var v = $('#structure').val();
+        var t = v.split('\n');
+        var h = {};
+        var s = t.filter(isNotComment);
+        srcData = s.reduce(function (memo, str, i) {
+                    var tokens = str
+                            .split('>')
+                            .map(function (t) {
+                                return t.trim();
+                            })
+                            .filter(_.identity);
+
+                    if (i === 0 && tokens.length === 1) {
+
+                        var k = tokens[0];
+                        h[k] = k;
+
+                        return memo.concat({
+                            "name": k,
+                            "k": k,
+                            "path": k,
+                            "rate": -1
+                        });
+                    }
+
+                    if (tokens.length < 2) {
+                        // just skip it
+                        return memo;
+                    }
+
+                    var row = {
+                        "name": tokens[1],
+                        "k": tokens[1],
+                        "path": h[tokens[0]] + "/" + tokens[0],
+                        rate: (tokens[2] === '+' ? (+1) : (-1))
+                    };
+
+                    h[row.k] = row.path;
+
+                    return memo.concat(row);
+                },
+                []);
+
+        feedback = t
+                .filter(isComment)
+                .reduce(function (memo, str) {
+                    var tokens = str
+                            .split(':')
+                            .map(function (t) {
+                                return t.trim();
+                            })
+                            .filter(_.identity);
+
+                    var sign = tokens[0].charAt(0);
+                    var k = tokens[0].substr(1);
+
+                    return memo.concat({
+                        "k":k,
+                        rate: sign === '+' ? (+1) : (-1),
+                        comment: tokens[1],
+                        author: tokens[2],
+                        date: new Date()
+                    });
+                },
+                []);
+    }
+
+    parseSrc();
 
     var forceLayout = function () {
         var s = size();
@@ -120,52 +223,6 @@
     var onDblClickBranch = function (row) {
         window.location.hash = ('#' + row.k);
     };
-
-    var onClickBranch = function (row) {
-        var childPath = row.path + '/' + row.k;
-        $('.i-role-add').val(childPath + ':sub-branch');
-        $('.i-role-feed').val(row.k + ':add comment here');
-    };
-
-    var addChild = function (newPath, newName) {
-        srcData.push({
-            name: newName,
-            path: newPath,
-            k: (srcData.length + 1)
-        });
-
-        drawFishbone(getData());
-    };
-
-    var addFeedback = function (k, comment, rate) {
-
-        feedback.push({
-            "k":k,
-            rate: (rate == '+') ? (+1) : (-1),
-            comment: comment,
-            author: "anonymus",
-            date: new Date()
-        });
-
-        drawFishbone(getData());
-    };
-
-    // load the data
-    srcData = [
-        {"name": "Quality", k: "0", "path": "."},
-        {"name": "Method", k: "1", "path": "./0"},
-        {"name": "Machine", k: "2", "path": "./0"},
-
-        {"name": "Mill", k: "3", "path": "./0/2"},
-        {"name": "Mixer", k: "4", "path": "./0/2"},
-
-        {"name": "Sci-fi", k: "5", "path": "./0/1"},
-
-        {"name": "Method 1", k: "6", "path": "./0/1/5"},
-        {"name": "Method 1.1", k: "7", "path": "./0/1/5/6"},
-        {"name": "Method 1.1.1", k: "8", "path": "./0/1/5/6/7"},
-        {"name": "BBB", k: "9", "path": "./0/1/5/6/7/8"}
-    ];
 
     var getData = function () {
         return JSON.parse(JSON.stringify(srcData));
@@ -183,11 +240,11 @@
                     return feedback;
                 },
                 onDblClickBranch,
-                onClickBranch);
+                function () {});
 
-        var body = d3.select('body');
-        body.select('svg').remove();
-        svg = body
+        var target = d3.select('#target');
+        target.select('svg').remove();
+        svg = target
                 .append('svg')
                 .attr(size())
                 .call(fishbone.defaultArrow)

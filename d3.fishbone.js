@@ -84,7 +84,9 @@
             _nodes = [];
 
             // populate the nodes and the links globals as a side effect
-            _build_nodes(fnSrcData().sort(function (a, b) { return a.path.length - b.path.length })[0]);
+            _build_nodes(fnSrcData().sort(function (a, b) {
+                return a.path.split('/').length - b.path.split('/').length
+            })[0]);
 
             // set the nodes and the links of the force
             _force
@@ -101,7 +103,9 @@
                 .append('line');
             lnks.attr({
                     "class": function (d) {
-                        return "link link-" + d.depth;
+                        var r = d.source.tail ? (-1) : (d.source.rate || (+1));
+                        var c = (r > 0) ? 'positive' : 'negative';
+                        return "link link-" + d.depth + ' link-' + c;
                     },
                     "marker-end": function (d) {
                         return d.arrow ? "url(#" + _arrowId(d) + ")" : null;
@@ -140,13 +144,6 @@
                         .text(_label)
                         .on('click', onClickBranch)
                         .on('dblclick', onDblClickBranch);
-
-                    //this.append('circle')
-                    //    .attr({
-                    //        r: function (row) {
-                    //            return _feedback(row.name).length;
-                    //        }
-                    //    });
 
                     this.append('rect')
                         .attr({
