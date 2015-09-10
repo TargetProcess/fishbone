@@ -1,13 +1,18 @@
 <!DOCTYPE html>
+<html>
+
 <head>
-    <title>Fishbone diagram</title>
-    <meta charset="utf-8">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Online Ishikava / Fishbone diagram">
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheet.css">
+    <title>Online Ishikava / Fishbone diagram</title>
     <style>
-        html, body{ margin: 0; padding: 0; overflow: hidden;}
+        html, body{ margin: 0; padding: 0; overflow: hidden;background: none}
 
         *{ font-family: monospace; }
 
-        .note {color:gray;}
+        .note {color:gray;font-size: 0.8em;}
 
         .label-0{ font-size: 2em; }
         .label-1{ font-size: 1.5em; fill: #111; }
@@ -37,21 +42,49 @@
     <script src="./underscore-min.js" charset="utf-8"></script>
     <script src="./underscore.string.min.js" charset="utf-8"></script>
 </head>
+
 <body>
 
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+    <header class="inner">
+        <h2 id="project_tagline">Online Ishikava / Fishbone diagram</h2>
+    </header>
+</div>
+
 <div style="padding: 2px;width: 24%;float:left;min-height: 1000px;">
-    <p class="note">* Redraw happens on Enter or use <button id="refresh">Refresh</button></p>
-    <p class="note">* Use double-click on node to drill down</p>
-    <p class="note">* Get back to the <a href="#">root</a></p>
+    <p class="note">- Type brainstorm protocol below</p>
+    <p class="note">- Redraw happens on Enter or use <button id="refresh">Refresh</button></p>
+    <p class="note">- Use double-click on node to drill down</p>
+    <p class="note">- Click to <a href="#">get back to root</a></p>
 <textarea id="structure" style="width:100%; min-height: 600px;">
-Problem
+A Problem
 - People
+-- Why?
+--- Why?
+---- Why?
+     ! Comment node with exclamation / @author / + for pros
+     ! Comment node with exclamation / @author / - for cons
+
 - Process
--- Cause 1
---- Detailed cause
---- Detailed fix
--- Fix 1
+-- Why?
+--- Why?
+
 - Equipment
+-- Why?
+--- Why?
+
+- Materials
+-- Why?
+--- Why?
+
+- Environment
+-- Why?
+--- Why?
+
+- Management
+-- Precedent
+--- Why?
 </textarea>
 </div>
 
@@ -100,7 +133,7 @@ Problem
         var g = window.document.documentElement;
         return {
             width: $('#target').width(),
-            height: g.clientHeight
+            height: g.clientHeight - 65
         };
     });
 
@@ -115,12 +148,16 @@ Problem
     var srcData = [];
     var feedback = [];
 
-    function parseTokenRow(str) {
-        var i = -1;
-        while (str.charAt(++i) === '-');
-        var token = str.substr(i).trim();
+    function parseTokenRow(str, i) {
+        var c = -1;
+        while (str.charAt(++c) === '-');
+        var token = str.substr(c).trim();
         var parts = token.split('/');
-        return {level: i, key: parts[0], rate: ((parts[1] === '+') ? (+1) : (-1))};
+        return {
+            level: c,
+            key: (parts[0] + i),
+            name: (parts[0]),
+            rate: ((parts[1] === '+') ? (+1) : (-1))};
     }
 
     function parseCommentRow(str) {
@@ -158,7 +195,7 @@ Problem
                 .filter(function (rowStr) {
                     return !!rowStr.trim();
                 })
-                .forEach(function (rowStr) {
+                .forEach(function (rowStr, i) {
                     var s = rowStr.trim();
                     if (s.charAt(0) === '!') {
                         // comment
@@ -171,17 +208,18 @@ Problem
                         });
                     } else {
                         // structure
-                        var o = parseTokenRow(s);
-                        var i = o.level;
-                        var k = o.key;
-                        var r = o.rate;
-                        path[i] = k;
-                        path = path.slice(0, (i + 1));
+                        var o = parseTokenRow(s, i);
+                        var lvl = o.level;
+                        var key = o.key;
+                        var name = o.name;
+                        var rate = o.rate;
+                        path[lvl] = key;
+                        path = path.slice(0, (lvl + 1));
                         srcData.push({
-                            "k": k,
-                            "name": k,
-                            "path": ['.'].concat(path.slice(0, i)).join('/'),
-                            "rate": r
+                            "k": key,
+                            "name": name,
+                            "path": ['.'].concat(path.slice(0, lvl)).join('/'),
+                            "rate": rate
                         });
                     }
                 });
