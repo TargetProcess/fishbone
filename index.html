@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <head>
-    <title>d3 Fishbone diagram</title>
+    <title>Fishbone diagram</title>
     <meta charset="utf-8">
     <style>
         html, body{ margin: 0; padding: 0; overflow: hidden;}
 
-        /* get it? gill? */
         *{ font-family: monospace; }
+
+        .note {color:gray;}
 
         .label-0{ font-size: 2em; }
         .label-1{ font-size: 1.5em; fill: #111; }
@@ -38,49 +39,27 @@
 </head>
 <body>
 
-<div style="padding: 2px;width: 19%;float:left;min-height: 1000px;">
-<textarea id="structure" style="width:100%; min-height: 800px;">
+<div style="padding: 2px;width: 24%;float:left;min-height: 1000px;">
+    <p class="note">* Redraw happens on Enter or use <button id="refresh">Refresh</button></p>
+    <p class="note">* Use double-click on node to drill down</p>
+    <p class="note">* Get back to the <a href="#">root</a></p>
+<textarea id="structure" style="width:100%; min-height: 600px;">
 Problem
-Problem > People
-Problem > Process
-Problem > Equipment
-Problem > Materials
-Problem > Environment
-Problem > Management
-
-Process > Cause 1
-Cause 1 > Detailed cause
-Cause 1 > Detailed fix > +
-Process > Fix 1 > +
-
-+Fix 1 : solve all problems : Alex
--Fix 1 : require too many time
--Fix 1 : : Misha
--Fix 1 : : Vadim
--Fix 1 : : Oleg
--Fix 1 : : Jenya
-+Fix 1 : : Kostya
-+Fix 1 : : Alla
-
-Equipment > Servers
-Servers > Jenkins
-Servers > Statistics
-Statistics > Statistics Speed
-Statistics Speed > SSD > +
-Statistics Speed > Cloud > +
-Cloud > Statistics Price
-
-+Statistics Price: Approve budget : Misha
--Statistics Price: No money for coffee : Jenya
+- People
+- Process
+-- Cause 1
+--- Detailed cause
+--- Detailed fix
+-- Fix 1
+- Equipment
 </textarea>
-    <button id="refresh">Refresh</button>
 </div>
 
-<div id="target" style="border: dotted 1px #000; min-height: 1000px; width: 80%;float:right"></div>
+<div id="target" style="border: dotted 1px #000; min-height: 1000px; width: 75%;float:right"></div>
 
 <script>
 
-    $(window).on('hashchange', function() {
+    var drawInContext = function() {
 
         var srcData = getData();
 
@@ -103,11 +82,18 @@ Cloud > Statistics Price
         srcData = rec.concat(subX);
 
         drawFishbone(srcData);
+    };
+
+    $('#structure').on('keypress', function (e) {
+        if (e.keyCode === 13) {
+            parseSrc();
+            drawInContext();
+        }
     });
 
     $('#refresh').on('click', function (e) {
         parseSrc();
-        drawFishbone(getData());
+        drawInContext();
     });
 
     var size = (function () {
@@ -129,82 +115,76 @@ Cloud > Statistics Price
     var srcData = [];
     var feedback = [];
 
+    function parseTokenRow(str) {
+        var i = -1;
+        while (str.charAt(++i) === '-');
+        var token = str.substr(i).trim();
+        var parts = token.split('/');
+        return {level: i, key: parts[0], rate: ((parts[1] === '+') ? (+1) : (-1))};
+    }
+
+    function parseCommentRow(str) {
+        return str
+                .trim()
+                .substr(1) // remove !
+                .split('/')
+                .map(function (p) {
+                    return p.trim();
+                })
+                .reduce(function (memo, p) {
+                    var c = p.charAt(0);
+                    if (c === '+') {
+                        memo.rate = (+1);
+                    } else if (c === '-') {
+                        memo.rate = (-1);
+                    } else if (c === '@') {
+                        memo.author = p.substr(1);
+                    } else {
+                        memo.comment = p;
+                    }
+                    return memo;
+                }, {});
+    }
+
     function parseSrc() {
-
-        var isComment = function (str) {
-            var s = str.charAt(0);
-            return ((s === '+') || (s === '-'));
-        };
-
-        var isNotComment = function (str) {
-            return !isComment(str);
-        };
 
         var v = $('#structure').val();
         var t = v.split('\n');
-        var h = {};
-        var s = t.filter(isNotComment);
-        srcData = s.reduce(function (memo, str, i) {
-                    var tokens = str
-                            .split('>')
-                            .map(function (t) {
-                                return t.trim();
-                            })
-                            .filter(_.identity);
 
-                    if (i === 0 && tokens.length === 1) {
-
-                        var k = tokens[0];
-                        h[k] = k;
-
-                        return memo.concat({
-                            "name": k,
+        var path = [];
+        feedback = [];
+        srcData = [];
+        t
+                .filter(function (rowStr) {
+                    return !!rowStr.trim();
+                })
+                .forEach(function (rowStr) {
+                    var s = rowStr.trim();
+                    if (s.charAt(0) === '!') {
+                        // comment
+                        var c = parseCommentRow(s);
+                        feedback.push({
+                            k: path[path.length - 1],
+                            rate: (c.rate || -1),
+                            comment: c.comment,
+                            author: c.author
+                        });
+                    } else {
+                        // structure
+                        var o = parseTokenRow(s);
+                        var i = o.level;
+                        var k = o.key;
+                        var r = o.rate;
+                        path[i] = k;
+                        path = path.slice(0, (i + 1));
+                        srcData.push({
                             "k": k,
-                            "path": k,
-                            "rate": -1
+                            "name": k,
+                            "path": ['.'].concat(path.slice(0, i)).join('/'),
+                            "rate": r
                         });
                     }
-
-                    if (tokens.length < 2) {
-                        // just skip it
-                        return memo;
-                    }
-
-                    var row = {
-                        "name": tokens[1],
-                        "k": tokens[1],
-                        "path": h[tokens[0]] + "/" + tokens[0],
-                        rate: (tokens[2] === '+' ? (+1) : (-1))
-                    };
-
-                    h[row.k] = row.path;
-
-                    return memo.concat(row);
-                },
-                []);
-
-        feedback = t
-                .filter(isComment)
-                .reduce(function (memo, str) {
-                    var tokens = str
-                            .split(':')
-                            .map(function (t) {
-                                return t.trim();
-                            })
-                            .filter(_.identity);
-
-                    var sign = tokens[0].charAt(0);
-                    var k = tokens[0].substr(1);
-
-                    return memo.concat({
-                        "k":k,
-                        rate: sign === '+' ? (+1) : (-1),
-                        comment: tokens[1],
-                        author: tokens[2],
-                        date: new Date()
-                    });
-                },
-                []);
+                });
     }
 
     parseSrc();
@@ -253,15 +233,16 @@ Cloud > Statistics Price
         forceLayout();
     };
 
-    drawFishbone(getData());
+    $(window).on('hashchange', drawInContext);
+    drawInContext();
 
     // handle resizing the window
     d3
-            .select(window)
-            .on("resize", function () {
-                forceLayout();
-                svg.attr(size());
-            });
+        .select(window)
+        .on("resize", function () {
+            forceLayout();
+            svg.attr(size());
+        });
 </script>
 </body>
 </html>
